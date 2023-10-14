@@ -4,11 +4,15 @@
 # Jimmy da Geek
 
 import socket
+import selectors
+import types
 
 HOST = "127.0.0.1"      # Standard loopback interface address (localhost)
 PORT = 65432            # Port to listen on (non-privileged ports are > 1023)
 ALL_ACCOUNTS = dict()   # initialize an empty dictionary
 ACCT_FILE = "accounts.txt"
+
+
 
 ##########################################################
 #                                                        #
@@ -139,9 +143,13 @@ def load_all_accounts(acct_file = "accounts.txt"):
 ##########################################################
 
 def run_network_server():
-    """ This and all supporting code needs to be written! """
-    print("Bank server network functions not implemented!!")
-    return
+    sel = selectors.DefaultSelector()
+    lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    lsock.bind((HOST, PORT))
+    lsock.listen()
+    print(f"Listening on {(HOST, PORT)}")
+    lsock.setblocking(False)
+    sel.register(lsock, selectors.EVENT_READ, data=None)
 
 ##########################################################
 #                                                        #
