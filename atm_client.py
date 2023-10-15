@@ -3,6 +3,8 @@
 # Automated Teller Machine (ATM) client application.
 
 import socket
+import selectors
+import types
 
 HOST = "127.0.0.1"      # The bank server's IP address
 PORT = 65432            # The port used by the bank server
@@ -14,54 +16,107 @@ PORT = 65432            # The port used by the bank server
 # NEEDS REVIEW. Changes may be needed in this section.   #
 #                                                        #
 ##########################################################
+def configure_selectors(sock):
+    sock.setblocking(False)
+    sel = selectors.DefaultSelector()
+    events = selectors.EVENT_WRITE | selectors.EVENT_READ
+    data = {}
+    sel.register(sock, events, data=data)
+    return sel
 
-def send_to_server(sock, msg):
+def send_to_server(sel, msg):
     """ Given an open socket connection (sock) and a string msg, send the string to the server. """
-    # TODO make sure this works as needed
-    return sock.sendall(msg.encode('utf-8'))
+    for key, mask in sel.select():
+        sock = key.fileobj
+        if mask & selectors.EVENT_WRITE:
+            print("Sending " + msg + " to the server...")
+            return sock.sendall(msg.encode('utf-8'))
+        else:
+            print("It is not ready to send massage")
+            return False
 
-def get_from_server(sock):
+def get_from_server(sel):
     """ Attempt to receive a message from the active connection. Block until message is received. """
-    # TODO make sure this works as needed
-    msg = sock.recv(1024)
-    return msg.decode('utf-8')
+    while True:
+        for key, mask in sel.select():
+            sock = key.fileobj
+            if mask & selectors.EVENT_READ:
+                msg = sock.recv(1024)
+                return msg.decode("utf-8")
 
-def login_to_server(sock, acct_num, pin):
+
+def login_to_server(sel, acct_num, pin):
     """ Attempt to login to the bank server. Pass acct_num and pin, get response, parse and check whether login was successful. """
     validated = 0
-    # TODO: Write this code!
+    acct_check = False
+    send_to_server(sel, acct_num)
+    msg = get_from_server(sel)
+    if msg == "1":
+        acct_check = True
+    if acct_check:
+        send_to_server(sel,pin)
+        msg = get_from_server(sel)
+        if msg == "1":
+            validated = 1
     return validated
 
 def get_login_info():
-    """ Get info from customer. TODO: Validate inputs, ask again if given invalid input. """
+    """ Get info from customer. Validate inputs, ask again if given invalid input. """
     acct_num = input("Please enter your account number: ")
-    pin = input("Please enter your four digit PIN: ")
-    return acct_num, pin
+    if isinstance(acct_num, str) and \
+    len(acct_num) == 8 and \
+    acct_num[2] == '-' and \
+    acct_num[:2].isalpha() and \
+    acct_num[3:8].isdigit():
+        pin = input("Please enter your four digit PIN: ")
+        if (isinstance(pin, str) and \
+        len(pin) == 4 and \
+        pin.isdigit()):   
+            return acct_num, pin
+        else:
+            print("The PIN format is invalid")
+    else:
+        print("The account number is in invalid format")
+    return "", ""
 
-def process_deposit(sock, acct_num):
-    """ TODO: Write this code. """
-    bal = get_acct_balance(sock, acct_num)
-    amt = input("How much would you like to deposit? (You have ${bal} available)")
-    # TODO communicate with the server to request the deposit, check response for success or failure.
-    print("Deposit transaction completed.")
+def process_deposit(sel, acct_num):
+    """ Write this code. """
+    bal = get_acct_balance(sel, acct_num)
+    amt = input(f"How much would you like to deposit? (You have ${bal} available)")
+    # communicate with the server to request the deposit, check response for success or failure.
+    send_to_server(sel, "d" + amt)
+    valid = get_from_server(sel)
+    if valid == 1:
+        print("Deposit transaction completed.")
+    else:
+        print("Something is wrong")
     return
 
-def get_acct_balance(sock, acct_num):
-    """ TODO: Ask the server for current account balance. """
-    bal = 0.0
-    # TODO code needed here, to get balance from server then return it
+def get_acct_balance(sel, acct_num):
+    """ Ask the server for current account balance. """
+    send_to_server(sel, "b" + acct_num)
+    bal = get_from_server(sel)
+    # code needed here, to get balance from server then return it
     return bal
 
-def process_withdrawal(sock, acct_num):
-    """ TODO: Write this code. """
-    bal = get_acct_balance(sock, acct_num)
+def process_withdrawal(sel, acct_num):
+    """ Write this code. """
+    bal = get_acct_balance(sel, acct_num)
     amt = input(f"How much would you like to withdraw? (You have ${bal} available)")
-    # TODO communicate with the server to request the withdrawal, check response for success or failure.
-    print("Withdrawal transaction completed.")
+    #  communicate with the server to request the withdrawal, check response for success or failure.
+    if amt>bal:
+        print("The amount to withdraw is more than your balance")
+        return 
+    send_to_server(sel, "w" + amt)
+    valid = get_from_server(sel)
+    if valid == 1:
+        print("Withdrawal transaction completed.")
+    else:
+        print("Something is wrong")
     return
 
-def process_customer_transactions(sock, acct_num):
-    """ Ask customer for a transaction, communicate with server. TODO: Revise as needed. """
+def process_customer_transactions(sel, acct_num):
+    """ Ask customer for a transaction, communicate with server. Revise as needed. """
     while True:
         print("Select a transaction. Enter 'd' to deposit, 'w' to withdraw, or 'x' to exit.")
         req = input("Your choice? ").lower()
@@ -72,22 +127,29 @@ def process_customer_transactions(sock, acct_num):
             # if customer wants to exit, break out of the loop
             break
         elif req == 'd':
-            process_deposit(sock, acct_num)
+            process_deposit(sel, acct_num)
         else:
-            process_withdrawal(sock, acct_num)
+            process_withdrawal(sel, acct_num)
 
 def run_atm_core_loop(sock):
+    sel = configure_selectors(sock)
     """ Given an active network connection to the bank server, run the core business loop. """
+    login_check = False
     acct_num, pin = get_login_info()
-    validated = login_to_server(sock, acct_num, pin)
-    if validated:
-        print("Thank you, your credentials have been validated.")
+    if acct_num != "" and pin != "":
+        login_check = True
+    if login_check:
+        validated = login_to_server(sel, acct_num, pin)
+        if validated == 1:
+            print("Thank you, your credentials have been validated.")
+        else:
+            print("Account number and PIN do not match. Terminating ATM session.")
+            return False
+        process_customer_transactions(sel, acct_num)
+        print("ATM session terminating.")
+        return True
     else:
-        print("Account number and PIN do not match. Terminating ATM session.")
-        return False
-    process_customer_transactions(sock, acct_num)
-    print("ATM session terminating.")
-    return True
+        print("ATM session terminating.")
 
 ##########################################################
 #                                                        #
