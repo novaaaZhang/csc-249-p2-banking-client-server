@@ -33,6 +33,7 @@ def send_to_server(sel, msg):
         if mask & selectors.EVENT_WRITE:
             print("Sending " + msg + " to the server...")
             return sock.sendall(msg.encode('utf-8'))
+        
         else:
             print("It is not ready to send massage")
             return False
@@ -44,7 +45,8 @@ def get_from_server(sel):
             sock = key.fileobj
             if mask & selectors.EVENT_READ:
                 msg = sock.recv(1024)
-                return msg.decode("utf-8")
+                if msg:
+                    return msg.decode("utf-8")
 
 
 def login_to_server(sel, acct_num, pin):
@@ -53,6 +55,7 @@ def login_to_server(sel, acct_num, pin):
     acct_check = False
     send_to_server(sel, acct_num)
     msg = get_from_server(sel)
+    print("receiving message: " + msg + "from the server")
     if msg == "0":
         acct_check = True
     if acct_check:
@@ -142,7 +145,7 @@ def run_atm_core_loop(sock):
         login_check = True
     if login_check:
         validated = login_to_server(sel, acct_num, pin)
-        if validated == 1:
+        if validated == 0:
             print("Thank you, your credentials have been validated.")
         else:
             print("Account number and PIN do not match. Terminating ATM session.")
