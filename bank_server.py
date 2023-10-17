@@ -186,7 +186,7 @@ def service_connection(sel, key, mask):
             if get_acct(recv_data):
                 data.valid_code = 1
                 data.acct_num = get_acct(recv_data)
-        if data.valid_code == 1:
+        if data.valid_code == 10:
             if 
             else:
                 print(f"Closing connection to {data.addr}")
