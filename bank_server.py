@@ -136,6 +136,25 @@ def load_all_accounts(acct_file = "accounts.txt"):
             load_account(acct_data[0], acct_data[1], acct_data[2])
     print("finished loading account data")
     return True
+def request_format(request):
+    if request[0] == "w" or request[0] == "d":
+        if request[1:].isdigit():
+            return True
+    return False
+
+def analyze_request(request, bank_account):
+    if request_format(request):
+        if request[0] == "w":
+            amt = request[1:]
+            result_code, balance = bank_account.withdraw(amt)
+            return result_code, balance
+        if request[0] == "d":
+            amt = request[1:]
+            result_code, balance = bank_account.deposit(amt)
+            return result_code, balance
+    else:
+        return False
+    
 
 ##########################################################
 #                                                        #
@@ -173,6 +192,8 @@ def accept_wrapper(sel, sock):
     data = types.SimpleNamespace(
         valid_code = 11,
         acct_num = None,
+        msg = None,
+        addr = addr
     )
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(conn, events, data=data)
@@ -182,21 +203,39 @@ def service_connection(sel, key, mask):
     data = key.data
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(1024)  # Should be ready to read
+        recv_data = recv_data.decode("utf-8")
         if data.valid_code == 11:
             if get_acct(recv_data):
-                data.valid_code = 1
-                data.acct_num = get_acct(recv_data)
-        if data.valid_code == 10:
-            if 
+                data.valid_code = 10
+                data.acct_num = get_acct(recv_data).acct_number
+                data.msg = 0
             else:
+                print("Account number is not matching")
                 print(f"Closing connection to {data.addr}")
                 sel.unregister(sock)
                 sock.close()
+        if data.valid_code == 10:
+            pin = ALL_ACCOUNTS[data.acct_num].acct_pin
+            if pin == recv_data:
+                data.valid_code = 00
+                data.msg = 0
+            else:
+                print("PIN is not matching")
+                print(f"Closing connection to {data.addr}")
+                sel.unregister(sock)
+                sock.close()
+        if data.valid_code == 00:
+            request = recv_data
+            if request_format(request):
+                result_code, balance = analyze_request(request, data.acct_num)
+                data.msg = [result_code, balance]
+            else:
+                data.msg = 100
     if mask & selectors.EVENT_WRITE:
-        if data.outb:
-            print(f"Echoing {data.outb!r} to {data.addr}")
-            sent = sock.send(data.outb)  # Should be ready to write
-            data.outb = data.outb[sent:]
+        if data.msg:
+            print(f"Sending {data.msg!r} to {data.addr}")
+            sent = sock.send(data.msg)  # Should be ready to write
+            data.msg = data.msg[sent:]
 
 ##########################################################
 #                                                        #
@@ -254,3 +293,4 @@ if __name__ == "__main__":
     #demo_bank_server()
     run_network_server()
     print("bank server exiting...")
+    print(ALL_ACCOUNTS['ac-12345'].acct_balance)
