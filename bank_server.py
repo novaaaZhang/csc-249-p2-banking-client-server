@@ -3,8 +3,12 @@
 # Bank Server application
 # Jimmy da Geek
 
+## 1 -> reject
+## 0 -> accept
+
 import socket
 import selectors
+import types
 
 HOST = "127.0.0.1"      # Standard loopback interface address (localhost)
 PORT = 65432            # Port to listen on (non-privileged ports are > 1023)
@@ -166,7 +170,10 @@ def accept_wrapper(sel, sock):
     conn, addr = sock.accept()  
     print(f"Accepted connection from {addr}")
     conn.setblocking(False)
-    data = {}
+    data = types.SimpleNamespace(
+        valid_code = 11,
+        acct_num = None,
+    )
     events = selectors.EVENT_READ | selectors.EVENT_WRITE
     sel.register(conn, events, data=data)
 
@@ -175,13 +182,16 @@ def service_connection(sel, key, mask):
     data = key.data
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(1024)  # Should be ready to read
-        if recv_data:
-            print("recieving data" + str(recv_data))
-            data.outb += recv_data
-        else:
-            print(f"Closing connection to {data.addr}")
-            sel.unregister(sock)
-            sock.close()
+        if data.valid_code == 11:
+            if get_acct(recv_data):
+                data.valid_code = 1
+                data.acct_num = get_acct(recv_data)
+        if data.valid_code == 1:
+            if 
+            else:
+                print(f"Closing connection to {data.addr}")
+                sel.unregister(sock)
+                sock.close()
     if mask & selectors.EVENT_WRITE:
         if data.outb:
             print(f"Echoing {data.outb!r} to {data.addr}")

@@ -2,6 +2,9 @@
 #
 # Automated Teller Machine (ATM) client application.
 
+## 1 -> reject
+## 0 -> accept
+
 import socket
 import selectors
 
@@ -46,17 +49,17 @@ def get_from_server(sel):
 
 def login_to_server(sel, acct_num, pin):
     """ Attempt to login to the bank server. Pass acct_num and pin, get response, parse and check whether login was successful. """
-    validated = 0
+    validated = 1
     acct_check = False
     send_to_server(sel, acct_num)
     msg = get_from_server(sel)
-    if msg == "1":
+    if msg == "0":
         acct_check = True
     if acct_check:
         send_to_server(sel,pin)
         msg = get_from_server(sel)
-        if msg == "1":
-            validated = 1
+        if msg == "0":
+            validated = 0
     return validated
 
 def get_login_info():
