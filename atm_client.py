@@ -86,27 +86,27 @@ def get_login_info():
 
 def process_deposit(sel, acct_num):
     """ Write this code. """
-    bal = get_acct_balance(sel, acct_num)
     amt = input(f"How much would you like to deposit? (You have ${bal} available)")
     # communicate with the server to request the deposit, check response for success or failure.
     send_to_server(sel, "d" + amt)
     valid = get_from_server(sel)
-    if valid == 1:
+    if valid == 0:
         print("Deposit transaction completed.")
+        bal = get_acct_balance(sel, acct_num)
+        print("Your new balance is "+ bal)
     else:
         print("Something is wrong")
     return
 
 def get_acct_balance(sel, acct_num):
     """ Ask the server for current account balance. """
-    send_to_server(sel, "b" + acct_num)
+    send_to_server(sel, "b")
     bal = get_from_server(sel)
     # code needed here, to get balance from server then return it
     return bal
 
-def process_withdrawal(sel, acct_num):
+def process_withdrawal(sel, bal, acct_num):
     """ Write this code. """
-    bal = get_acct_balance(sel, acct_num)
     amt = input(f"How much would you like to withdraw? (You have ${bal} available)")
     #  communicate with the server to request the withdrawal, check response for success or failure.
     if amt>bal:
@@ -114,15 +114,20 @@ def process_withdrawal(sel, acct_num):
         return 
     send_to_server(sel, "w" + amt)
     valid = get_from_server(sel)
-    if valid == 1:
+    if valid == 0:
         print("Withdrawal transaction completed.")
+        bal = get_acct_balance(sel, acct_num)
+        print("Your new balance is " + bal)
+    elif valid == 1:
+        print("Invalid amount")
     else:
-        print("Something is wrong")
+        print("Account overdraft")
     return
 
 def process_customer_transactions(sel, acct_num):
     """ Ask customer for a transaction, communicate with server. Revise as needed. """
     while True:
+        bal = get_acct_balance(sel, acct_num)
         print("Select a transaction. Enter 'd' to deposit, 'w' to withdraw, or 'x' to exit.")
         req = input("Your choice? ").lower()
         if req not in ('d', 'w', 'x'):
@@ -132,9 +137,11 @@ def process_customer_transactions(sel, acct_num):
             # if customer wants to exit, break out of the loop
             break
         elif req == 'd':
+            print("Your balance is " + bal)
             process_deposit(sel, acct_num)
         else:
-            process_withdrawal(sel, acct_num)
+            print("Your balance is " + bal)
+            process_withdrawal(sel, bal, acct_num)
 
 def run_atm_core_loop(sock):
     sel = configure_selectors(sock)

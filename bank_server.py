@@ -148,11 +148,11 @@ def analyze_request(request, bank_account):
         if request[0] == "w":
             amt = request[1:]
             result_code, balance = bank_account.withdraw(amt)
-            return result_code, balance
+            return result_code
         if request[0] == "d":
             amt = request[1:]
             result_code, balance = bank_account.deposit(amt)
-            return result_code, balance
+            return result_code
     else:
         return False
     
@@ -237,8 +237,10 @@ def service_connection(sel, key, mask):
                 request = recv_data
                 if request:
                     if request_format(request):
-                        result_code, balance = analyze_request(request, data.acct_num)
-                        data.msg = [result_code, balance]
+                        result_code= analyze_request(request, ALL_ACCOUNTS[data.acct_num])
+                        data.msg = str(result_code)
+                    elif request == "b":
+                        data.msg = str(ALL_ACCOUNTS[data.acct_num].acct_balance)
                     else:
                         data.msg = "100"
             print(data.valid_code)
@@ -250,6 +252,7 @@ def service_connection(sel, key, mask):
             sent = sock.send(data.msg)  # Should be ready to write
             if data.msg == "1":
                 sel.unregister()
+                print("Closing connection...")
                 sock.close()
             else:
                 data.msg = data.msg[sent:]
@@ -309,5 +312,5 @@ if __name__ == "__main__":
     load_all_accounts(ACCT_FILE)
     # uncomment the next line in order to run a simple demo of the server in action
     #demo_bank_server()
-    # run_network_server()
-    # print("bank server exiting...")
+    run_network_server()
+    print("bank server exiting...")
