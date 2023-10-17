@@ -110,7 +110,7 @@ def load_account(num_str, pin_str, bal_str):
             new_acct = BankAccount(num_str, pin_str, bal)
             # Add the new account instance to the in-memory database
             ALL_ACCOUNTS[num_str] = new_acct
-            print(f"loaded account '{num_str}'")
+            print(f"loaded account '{num_str}', with pin '{new_acct.acct_pin}, and balance '{new_acct.acct_balance}")
             return True
     except ValueError:
         print(f"error loading acct '{num_str}': balance value not a float")
@@ -204,8 +204,10 @@ def service_connection(sel, key, mask):
     if mask & selectors.EVENT_READ:
         recv_data = sock.recv(1024)  # Should be ready to read
         recv_data = recv_data.decode("utf-8")
+        print("recieving: " + recv_data)
         if data.valid_code == 11:
             if get_acct(recv_data):
+                print("Account number is matching!")
                 data.valid_code = 10
                 data.acct_num = get_acct(recv_data).acct_number
                 data.msg = 0
@@ -216,6 +218,7 @@ def service_connection(sel, key, mask):
                 sock.close()
         if data.valid_code == 10:
             pin = ALL_ACCOUNTS[data.acct_num].acct_pin
+            print(pin)
             if pin == recv_data:
                 data.valid_code = 00
                 data.msg = 0
@@ -291,6 +294,7 @@ if __name__ == "__main__":
     load_all_accounts(ACCT_FILE)
     # uncomment the next line in order to run a simple demo of the server in action
     #demo_bank_server()
-    run_network_server()
-    print("bank server exiting...")
-    print(ALL_ACCOUNTS['ac-12345'].acct_balance)
+    # run_network_server()
+    # print("bank server exiting...")
+    account = BankAccount()
+    print(f"account_num {account.acct_number}, account_pin {account.acct_pin}, account_balance {account.acct_balance}")
