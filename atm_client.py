@@ -110,11 +110,11 @@ def process_withdrawal(sel, bal, acct_num):
         return 
     send_to_server(sel, "w" + amt)
     valid = get_from_server(sel)
-    if valid == 0:
+    if valid == "0":
         print("Withdrawal transaction completed.")
         bal = get_acct_balance(sel, acct_num)
         print("Your new balance is " + bal)
-    elif valid == 1:
+    elif valid == "111":
         print("Invalid amount")
     else:
         print("Account overdraft")
