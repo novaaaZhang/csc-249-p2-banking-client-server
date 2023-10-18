@@ -52,13 +52,11 @@ def get_from_server(sel):
 def login_to_server(sel, acct_num, pin):
     """ Attempt to login to the bank server. Pass acct_num and pin, get response, parse and check whether login was successful. """
     validated = 1
-    send_to_server(sel, acct_num)
+    sent = acct_num + ";" + pin
+    send_to_server(sel, sent)
     msg = get_from_server(sel)
     if msg == "0":
-        send_to_server(sel,pin)
-        msg = get_from_server(sel)
-        if msg == "0":
-            validated = 0
+        validated = 0
     if msg == "-2":
         validated = -2
     return validated
@@ -132,6 +130,7 @@ def process_customer_transactions(sel, acct_num):
             print("Unrecognized choice, please try again.")
             continue
         if req == 'x':
+            send_to_server(sel, "x")
             # if customer wants to exit, break out of the loop
             break
         elif req == 'd':

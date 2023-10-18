@@ -219,30 +219,26 @@ def service_connection(sel, key, mask):
         recv_data = recv_data.decode("utf-8")
         if recv_data:
             if data.valid_code == "11":
-                if get_acct(recv_data):
-                    if get_acct(recv_data).acct_status == True:
-                        get_acct(recv_data).acct_status = False
+                strArray = recv_data.split(";")
+                ac = strArray[0]
+                pn = strArray[1]
+                if get_acct(ac):
+                    if get_acct(ac).acct_status == True:
                         print("Account number is matching!")
-                        data.valid_code = "10"
-                        data.acct_num = get_acct(recv_data).acct_number
-                        data.msg = "0"
+                        data.acct_num = get_acct(ac).acct_number
+                        if pn == ALL_ACCOUNTS[ac].acct_pin:
+                            data.msg = "0"
+                            data.valid_code = "00"
+                            get_acct(ac).acct_status = False
+                            print("PIN is matching!")
+                        else:
+                            print("PIN is not matching")
+                            data.msg = "1"
                     else:
                         print("The account is in use")
                         data.msg = "-2"
                 else:
                     print("Account number is not matching")
-                    data.msg = "1"
-            elif data.valid_code == "10":
-                pin = ALL_ACCOUNTS[data.acct_num].acct_pin
-                print("should be: " + pin)
-                print("recved: " + recv_data)
-                if pin == recv_data:
-                    data.valid_code = "00"
-                    data.msg = "0"
-                    print("PIN is matching!")
-                else:
-                    print("PIN is not matching")
-                    get_acct(recv_data).acct_status = True
                     data.msg = "1"
             elif data.valid_code == "00":
                 request = recv_data
@@ -254,6 +250,10 @@ def service_connection(sel, key, mask):
                         data.msg = str(result_code)
                     elif request == "b":
                         data.msg = str(round(ALL_ACCOUNTS[data.acct_num].acct_balance, 2))
+                    elif request == "x":
+                        ALL_ACCOUNTS[data.acct_num].acct_status = True
+                        sel.unregister(sock)
+                        sock.close()
                     else:
                         data.msg = "100"         
     if mask & selectors.EVENT_WRITE:

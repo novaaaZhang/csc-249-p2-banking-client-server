@@ -1,12 +1,16 @@
 ; Client message:
+client-msg = login-msg / transection-msg 
+
+login-msg = account-input / pin-input
 account-input = 2ALPHA "-" 5DIGIT
 pin-input = 4DIGIT
-get-balance = "b"
-withdraw-operation = "w"
-deposit-operation = "d"
-exit = "x"
-amount = 1*DIGIT
+
+transection-msg = ("x" / "b") / ("d" / "w") 1*DIGIT
+
 ; Server message:
+server-msg = account-check / pin-check / request-check / balance
+
 account-check = "-2" / "0" / "1"
 pin-check = "0" / "1"
 request-check = "111" / "100" / "0" / "2"
+balance = 1*DIGIT
