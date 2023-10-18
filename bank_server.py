@@ -51,6 +51,7 @@ class BankAccount:
     acct_number = ''        # a unique account number
     acct_pin = ''           # a four-digit PIN code represented as a string
     acct_balance = 0.0      # a float value of no more than two decimal places
+    acct_status = True
     
     def __init__(self, ac_num = "zz-00000", ac_pin = "0000", bal = 0.0):
         """ Initialize the state variables of a new BankAccount instance. """
@@ -219,10 +220,15 @@ def service_connection(sel, key, mask):
         if recv_data:
             if data.valid_code == "11":
                 if get_acct(recv_data):
-                    print("Account number is matching!")
-                    data.valid_code = "10"
-                    data.acct_num = get_acct(recv_data).acct_number
-                    data.msg = "0"
+                    if get_acct(recv_data).acct_status == True:
+                        get_acct(recv_data).acct_status = False
+                        print("Account number is matching!")
+                        data.valid_code = "10"
+                        data.acct_num = get_acct(recv_data).acct_number
+                        data.msg = "0"
+                    else:
+                        print("The account is in use")
+                        data.msg = "-2"
                 else:
                     print("Account number is not matching")
                     data.msg = "1"
@@ -236,6 +242,7 @@ def service_connection(sel, key, mask):
                     print("PIN is matching!")
                 else:
                     print("PIN is not matching")
+                    get_acct(recv_data).acct_status = True
                     data.msg = "1"
             elif data.valid_code == "00":
                 request = recv_data
@@ -248,8 +255,7 @@ def service_connection(sel, key, mask):
                     elif request == "b":
                         data.msg = str(round(ALL_ACCOUNTS[data.acct_num].acct_balance, 2))
                     else:
-                        data.msg = "100"
-            print(data.msg)           
+                        data.msg = "100"         
     if mask & selectors.EVENT_WRITE:
         if data.msg:
             print(f"Sending {data.msg!r} to {data.addr}")
@@ -257,6 +263,7 @@ def service_connection(sel, key, mask):
             sent = sock.send(data.msg)  # Should be ready to write
             if (data.msg == "1".encode("utf-8")):
                 print(f"Closing connection to {data.addr}")
+                ALL_ACCOUNTS[data.acct_num].acct_status = True
                 sel.unregister(sock)
                 sock.close()
             else:    

@@ -59,6 +59,8 @@ def login_to_server(sel, acct_num, pin):
         msg = get_from_server(sel)
         if msg == "0":
             validated = 0
+    if msg == "-2":
+        validated = -2
     return validated
 
 def get_login_info():
@@ -150,6 +152,10 @@ def run_atm_core_loop(sock):
         validated = login_to_server(sel, acct_num, pin)
         if validated == 0:
             print("Thank you, your credentials have been validated.")
+        elif validated == -2:
+            sock.close()
+            print("The account is in use! Terminating ATM session")
+            return False
         else:
             sock.close()
             print("Account number and PIN do not match. Terminating ATM session.")
