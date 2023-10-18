@@ -1,2 +1,12 @@
 ; Client message:
-account-input = 4DIGIT
+account-input = 2ALPHA "-" 5DIGIT
+pin-input = 4DIGIT
+get-balance = "b"
+withdraw-operation = "w"
+deposit-operation = "d"
+exit = "x"
+amount = 1*DIGIT
+; Server message:
+account-check = "-2" / "0" / "1"
+pin-check = "0" / "1"
+request-check = "111" / "100" / "0" / "2"
