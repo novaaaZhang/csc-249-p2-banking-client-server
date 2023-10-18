@@ -246,7 +246,7 @@ def service_connection(sel, key, mask):
                             result_code == 111
                         data.msg = str(result_code)
                     elif request == "b":
-                        data.msg = str(ALL_ACCOUNTS[data.acct_num].acct_balance)
+                        data.msg = str(round(ALL_ACCOUNTS[data.acct_num].acct_balance, 2))
                     else:
                         data.msg = "100"
             print(data.msg)           
