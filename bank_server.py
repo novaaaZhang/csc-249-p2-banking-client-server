@@ -66,6 +66,7 @@ class BankAccount:
         This method returns three values: self, success_code, current balance.
         Success codes are: 0: valid result; 1: invalid amount given. """
         result_code = 0
+        amount = float(amount)
         if not amountIsValid(amount):
             result_code = 1
         else:
@@ -78,6 +79,7 @@ class BankAccount:
         This method returns three values: self, success_code, current balance.
         Success codes are: 0: valid result; 1: invalid amount given; 2: attempted overdraft. """
         result_code = 0
+        amount = float(amount)
         if not amountIsValid(amount):
             # invalid amount, return error 
             result_code = 1
@@ -147,11 +149,13 @@ def analyze_request(request, bank_account):
     if request_format(request):
         if request[0] == "w":
             amt = request[1:]
-            result_code, balance = bank_account.withdraw(amt)
+            result_code = bank_account.withdraw(amt)[1]
+            print("result code: " + str(result_code))
             return result_code
         if request[0] == "d":
             amt = request[1:]
-            result_code, balance = bank_account.deposit(amt)
+            result_code = bank_account.deposit(amt)[1]
+            print("result code: " + str(result_code))
             return result_code
     else:
         return False
@@ -238,23 +242,24 @@ def service_connection(sel, key, mask):
                 if request:
                     if request_format(request):
                         result_code= analyze_request(request, ALL_ACCOUNTS[data.acct_num])
+                        if result_code == 1:
+                            result_code == 111
                         data.msg = str(result_code)
                     elif request == "b":
                         data.msg = str(ALL_ACCOUNTS[data.acct_num].acct_balance)
                     else:
                         data.msg = "100"
-            print(data.valid_code)
-            print(data.msg)
+            print(data.msg)           
     if mask & selectors.EVENT_WRITE:
         if data.msg:
             print(f"Sending {data.msg!r} to {data.addr}")
             data.msg = data.msg.encode("utf-8")
             sent = sock.send(data.msg)  # Should be ready to write
-            if data.msg == "1":
-                sel.unregister()
-                print("Closing connection...")
+            if (data.msg == "1".encode("utf-8")):
+                print(f"Closing connection to {data.addr}")
+                sel.unregister(sock)
                 sock.close()
-            else:
+            else:    
                 data.msg = data.msg[sent:]
 
 

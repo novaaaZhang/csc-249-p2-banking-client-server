@@ -52,13 +52,9 @@ def get_from_server(sel):
 def login_to_server(sel, acct_num, pin):
     """ Attempt to login to the bank server. Pass acct_num and pin, get response, parse and check whether login was successful. """
     validated = 1
-    acct_check = False
     send_to_server(sel, acct_num)
     msg = get_from_server(sel)
-    print("receiving message: " + msg + "from the server")
     if msg == "0":
-        acct_check = True
-    if acct_check:
         send_to_server(sel,pin)
         msg = get_from_server(sel)
         if msg == "0":
@@ -86,16 +82,16 @@ def get_login_info():
 
 def process_deposit(sel, acct_num):
     """ Write this code. """
-    amt = input(f"How much would you like to deposit? (You have ${bal} available)")
+    amt = input()
     # communicate with the server to request the deposit, check response for success or failure.
     send_to_server(sel, "d" + amt)
     valid = get_from_server(sel)
-    if valid == 0:
+    if valid == "0":
         print("Deposit transaction completed.")
         bal = get_acct_balance(sel, acct_num)
         print("Your new balance is "+ bal)
     else:
-        print("Something is wrong")
+        print("Invalid amount")
     return
 
 def get_acct_balance(sel, acct_num):
@@ -107,7 +103,7 @@ def get_acct_balance(sel, acct_num):
 
 def process_withdrawal(sel, bal, acct_num):
     """ Write this code. """
-    amt = input(f"How much would you like to withdraw? (You have ${bal} available)")
+    amt = input()
     #  communicate with the server to request the withdrawal, check response for success or failure.
     if amt>bal:
         print("The amount to withdraw is more than your balance")
@@ -137,10 +133,10 @@ def process_customer_transactions(sel, acct_num):
             # if customer wants to exit, break out of the loop
             break
         elif req == 'd':
-            print("Your balance is " + bal)
+            print(f"How much would you like to deposit? (You have ${bal} available)")
             process_deposit(sel, acct_num)
         else:
-            print("Your balance is " + bal)
+            print(f"How much would you like to withdraw? (You have ${bal} available)")
             process_withdrawal(sel, bal, acct_num)
 
 def run_atm_core_loop(sock):
@@ -155,12 +151,15 @@ def run_atm_core_loop(sock):
         if validated == 0:
             print("Thank you, your credentials have been validated.")
         else:
+            sock.close()
             print("Account number and PIN do not match. Terminating ATM session.")
             return False
         process_customer_transactions(sel, acct_num)
+        sock.close()
         print("ATM session terminating.")
         return True
     else:
+        sock.close()
         print("ATM session terminating.")
 
 ##########################################################
